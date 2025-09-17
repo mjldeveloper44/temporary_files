@@ -1,0 +1,82 @@
+<html>
+<div>
+<div>Now Serving</div>
+<div><span style="font-size: 100px" id="now_serving">1</span></div>
+
+
+</div>
+
+<script>
+var senior = [];
+var regular = [];
+const savedEpoch = parseInt(localStorage.getItem("timestamp"), 10) || 0 ;
+if (savedEpoch !=0 ) {
+	const savedDayOfMonth = new Date(savedEpoch).getDate();
+	const dayOfMonth = new Date().getDate();
+
+	if ( savedDayOfMonth == dayOfMonth ) {
+		eval("var senior = "+localStorage.getItem("senior"));
+		eval("var regular = "+localStorage.getItem("regular"));
+		
+		if (!Array.isArray(senior)) senior=[];
+		if (!Array.isArray(regular)) regular=[];
+	}
+	console.log(senior,regular);
+}
+
+QConnect('ws://10.0.26.8:81/queue');
+
+function QConnect(ws_addr_port) {
+        console.log("connecting ... ");
+        if (typeof ws00+'' == 'undefined' || !ws00  ) {
+                console.log('socket connect to '+ws_addr_port);
+                ws00 = new WebSocket(ws_addr_port);
+                ws00.onmessage = function($e) {
+                        console.log($e.data);    
+						switch( $e.data.trim() ) {
+							case '1':
+									if (senior.length) senior.push(senior[senior.length-1]+1); else senior.push(1);
+									/* add for printer */
+									localStorage.setItem("senior",JSON.stringify(senior));
+									localStorage.setItem("timestamp",Date.now().toString());
+									break;
+							case '2':
+									if (regular.length) regular.push(regular[regular.length-1]+1); else regular.push(1);
+									localStorage.setItem("regular",JSON.stringify(regular));
+									localStorage.setItem("timestamp",Date.now().toString());
+									break;
+							case '3':
+							
+									if (senior.length) {
+										document.getElementById('now_serving').innerHTML = "P"+senior.shift();
+										localStorage.setItem("senior",JSON.stringify(regular));
+										localStorage.setItem("timestamp",Date.now().toString());
+									} else 
+									if (regular.length) {
+										document.getElementById('now_serving').innerHTML = regular.shift();
+										localStorage.setItem("regular",JSON.stringify(regular));
+										localStorage.setItem("timestamp",Date.now().toString());
+									}
+									break;
+							case '4':							
+									senior=[];
+									regular=[];
+									localStorage.setItem("senior",JSON.stringify(senior));
+									localStorage.setItem("regular",JSON.stringify(regular));
+									localStorage.setItem("timestamp",Date.now().toString());
+									
+									break;
+									
+						}
+						console.log(senior, regular);
+                }
+                ws00.onclose = function(e) { ws00=null; console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason); setTimeout(function() { QConnect(ws_addr_port); }, 5000) }
+                ws00.onerror = function(err) { console.error('Socket encountered error: ', err.message, 'Closing socket'); ws00.close(); }
+                ws00.onconnect = function(e) { console.log('connected'); }
+        }
+}
+
+
+</script>
+
+</html>
